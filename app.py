@@ -131,19 +131,27 @@ model_path = "iam_p4/best_encoder_decoder.pth"
 
 # Download model from Google Drive if needed (for deployment)
 GDRIVE_FILE_ID = "1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi"
-download_model_from_gdrive(GDRIVE_FILE_ID, model_path)
 
-# Load model - Force CPU and optimize for low memory
-device = torch.device('cpu')  # Force CPU on free tier
-print(f"🔥 Loading model on {device}...")
-print(f"📦 Model: {model_path}")
-
-# Set environment variables for memory optimization
+# Set environment variables for memory optimization BEFORE loading
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 
-model = load_handwriting_model(model_path, device=device)
-model.eval()  # Set to eval mode to reduce memory
+# Lazy loading - only load model on first request to reduce startup memory
+model = None
+device = torch.device('cpu')  # Force CPU on free tier
+
+def get_model():
+    """Lazy load model on first request"""
+    global model, model_path
+    if model is None:
+        print(f"🔥 Loading model on {device}...")
+        print(f"📦 Model: {model_path}")
+        download_model_from_gdrive(GDRIVE_FILE_ID, model_path)
+        model = load_handwriting_model(model_path, device=device)
+        model.eval()  # Set to eval mode to reduce memory
+        print("✅ Model loaded successfully!")
+    return model
 
 # Try to load a custom wordlist if present
 custom_words = []
@@ -272,7 +280,8 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
         print(f"📊 Batch tensor shape: {batch_tensor.shape}")
         
         # Run batch inference
-        model.eval()
+        current_model = get_model()  # Lazy load model
+        current_model.eval()
         all_results = []
         predictions = []
         confidences_list = []
@@ -285,7 +294,7 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
                 end_idx = min(i + batch_size, len(segments))
                 mini_batch = batch_tensor[i:end_idx]
                 
-                result = model.generate(
+                result = current_model.generate(
                     mini_batch, SOS_IDX, EOS_IDX, 
                     max_len=27, 
                     mode=decode_mode, 
@@ -445,9 +454,10 @@ def predict_handwriting():
         # Predict
         decode_method = "Beam Search (top-10)" if decode_mode == 'beam' else "Greedy"
         print(f"🤖 Running model inference with {decode_method}...")
-        model.eval()
+        current_model = get_model()  # Lazy load model
+        current_model.eval()
         with torch.no_grad():
-            result = model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=(decode_mode == 'beam'), return_confidence=True)
+            result = current_model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=(decode_mode == 'beam'), return_confidence=True)
 
             # Unpack result
             if isinstance(result, tuple):
