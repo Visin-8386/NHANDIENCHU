@@ -71,3 +71,15 @@ htmlcov/
 # Backup files
 *_backup.*
 *.bak
+
+# Documentation (không cần cho production)
+*.doc
+*.docx
+*.pdf
+DEPLOY_GUIDE.md
+README_HANDWRITING.md
+
+# Scripts không cần cho production
+scripts/train.py
+scripts/test_*.py
+test_*.py

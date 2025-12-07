@@ -133,11 +133,17 @@ model_path = "iam_p4/best_encoder_decoder.pth"
 GDRIVE_FILE_ID = "1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi"
 download_model_from_gdrive(GDRIVE_FILE_ID, model_path)
 
-# Load model
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# Load model - Force CPU and optimize for low memory
+device = torch.device('cpu')  # Force CPU on free tier
 print(f"🔥 Loading model on {device}...")
 print(f"📦 Model: {model_path}")
+
+# Set environment variables for memory optimization
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 model = load_handwriting_model(model_path, device=device)
+model.eval()  # Set to eval mode to reduce memory
 
 # Try to load a custom wordlist if present
 custom_words = []
