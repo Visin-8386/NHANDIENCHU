@@ -50,8 +50,6 @@
 | Decoding | Greedy hoặc Beam Search |
 | Training Loss | CrossEntropyLoss + label smoothing |
 
-⚠️ **Lưu ý quan trọng**: Dự án hiện tại **không** dùng LSTM + CTC decode.
-
 ---
 
 ## 🧪 Pipeline xử lý ảnh
