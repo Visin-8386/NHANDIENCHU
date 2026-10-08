@@ -140,6 +140,13 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
     Uses batch processing for improved performance
     """
     try:
+        # Beam search per word is ~3x slower and exceeds the request timeout on
+        # free-tier CPUs once there are several words; greedy is the practical
+        # choice for multi-word (beam stays available in single-word mode).
+        if decode_mode == 'beam':
+            print(f"⚡ Multi-word mode: forcing greedy decode (beam too slow per-word on free CPU)")
+            decode_mode = 'greedy'
+
         print(f"🔍 Multi-word mode: Segmenting image...")
         
         # Convert to grayscale if needed
