@@ -7,3 +7,4 @@ opencv-python
 pillow
 matplotlib
 pyspellchecker==0.7.1
+gdown

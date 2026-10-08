@@ -36,3 +36,6 @@ Thumbs.db
 *.log
 temp_*
 _*.txt
+
+# Personal documents
+\[4\]*.doc

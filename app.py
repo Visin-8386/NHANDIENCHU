@@ -36,15 +36,104 @@ from src.data.segmentation import (
 )
 from src.postprocessing.spellcheck import SpellCorrector
 
-# Đường dẫn đến mô hình đã huấn luyện
-# iam_p3: Larger model (d=384, 6+4 layers) - Better for single chars
+
+def download_model_from_gdrive(file_id, destination):
+    """Download model file from Google Drive if it doesn't exist locally."""
+    if os.path.exists(destination):
+        try:
+            file_size = os.path.getsize(destination)
+            if file_size < 1000:  # Less than 1KB is likely an error page
+                print(f"⚠️  Existing file seems corrupted ({file_size} bytes). Re-downloading...")
+                os.remove(destination)
+            else:
+                print(f"✅ Model file already exists at {destination}")
+                return
+        except Exception as e:
+            print(f"⚠️  Could not validate existing file: {e}. Re-downloading...")
+            if os.path.exists(destination):
+                os.remove(destination)
+
+    print(f"⬇️  Model not found locally. Downloading from Google Drive...")
+
+    # Create directory if needed
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
+
+    try:
+        # Try gdown first (best for Google Drive)
+        try:
+            import gdown
+            url = f"https://drive.google.com/uc?id={file_id}"
+            gdown.download(url, destination, quiet=False)
+            file_size = os.path.getsize(destination)
+            if file_size < 1000:
+                raise Exception(f"Downloaded file is too small ({file_size} bytes), likely an error page")
+            print(f"✅ Model downloaded successfully to {destination}")
+            return
+        except ImportError:
+            print("📦 gdown not found. Install it with: pip install gdown")
+            print("Trying alternative download method...")
+
+            import urllib.request
+
+            urls = [
+                f"https://drive.google.com/uc?id={file_id}&export=download&confirm=t",
+                f"https://drive.usercontent.google.com/download?id={file_id}&confirm=t",
+            ]
+            for url in urls:
+                try:
+                    print(f"Trying URL: {url}")
+                    urllib.request.urlretrieve(url, destination)
+                    file_size = os.path.getsize(destination)
+                    if file_size < 1000:
+                        os.remove(destination)
+                        continue
+                    print(f"✅ Model downloaded successfully to {destination}")
+                    return
+                except Exception as e:
+                    print(f"Failed with this URL: {e}")
+                    if os.path.exists(destination):
+                        os.remove(destination)
+                    continue
+
+            raise Exception("All download methods failed")
+
+    except Exception as e:
+        print(f"\n❌ Failed to download model: {e}")
+        print("\nPlease manually download the model:")
+        print("1. Go to: https://drive.google.com/file/d/1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi/view")
+        print("2. Click 'Download' button")
+        print(f"3. Place the downloaded file at: {destination}")
+        print("\nOr install gdown: pip install gdown")
+        raise
+
+
+# Path to the trained model
+# iam_p4: ResNet backbone, d=384, 6+4 layers - best CER (3.60%)
 model_path = "models/iam_p4/best_encoder_decoder.pth"
 
-# Load model
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"🔥 Loading model on {device}...")
-print(f"📦 Model: {model_path}")
-model = load_handwriting_model(model_path, device=device)
+# Download model from Google Drive if needed (for deployment)
+GDRIVE_FILE_ID = "1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi"
+
+# Memory optimization for free-tier deployment
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
+
+# Lazy loading - only load model on first request to reduce startup memory
+model = None
+device = torch.device('cpu')  # Force CPU on free tier
+
+def get_model():
+    """Lazy load model on first request"""
+    global model, model_path
+    if model is None:
+        print(f"🔥 Loading model on {device}...")
+        print(f"📦 Model: {model_path}")
+        download_model_from_gdrive(GDRIVE_FILE_ID, model_path)
+        model = load_handwriting_model(model_path, device=device)
+        model.eval()
+        print("✅ Model loaded successfully!")
+    return model
 
 # Try to load a custom wordlist if present
 custom_words = []
@@ -173,7 +262,8 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
         print(f"📊 Batch tensor shape: {batch_tensor.shape}")
         
         # Run batch inference
-        model.eval()
+        current_model = get_model()  # Lazy load model
+        current_model.eval()
         all_results = []
         predictions = []
         confidences_list = []
@@ -186,7 +276,7 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
                 end_idx = min(i + batch_size, len(segments))
                 mini_batch = batch_tensor[i:end_idx]
                 
-                result = model.generate(
+                result = current_model.generate(
                     mini_batch, SOS_IDX, EOS_IDX, 
                     max_len=27, 
                     mode=decode_mode, 
@@ -346,9 +436,10 @@ def predict_handwriting():
         # Predict
         decode_method = "Beam Search (top-10)" if decode_mode == 'beam' else "Greedy"
         print(f"🤖 Running model inference with {decode_method}...")
-        model.eval()
+        current_model = get_model()  # Lazy load model
+        current_model.eval()
         with torch.no_grad():
-            result = model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=(decode_mode == 'beam'), return_confidence=True)
+            result = current_model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=(decode_mode == 'beam'), return_confidence=True)
 
             # Unpack result
             if isinstance(result, tuple):

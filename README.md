@@ -254,6 +254,18 @@ WEB_AI/
 - **Multi** mode relies on segmentation for line/word splitting - results depend on input image quality
 - Spell-check supports English only (`pyspellchecker`); a custom wordlist can be loaded from `data/wordlist.txt`
 
+## Deployment
+
+The app auto-downloads model weights from Google Drive on first request (via `gdown`), so no large files are needed in the repo. Deploy configs are included:
+
+| File | Platform |
+|---|---|
+| `render.yaml` | Render (free tier, CPU-forced, lazy model loading) |
+| `Procfile` | Heroku / generic PaaS |
+| `runtime.txt` | Python version pin |
+
+See [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md) for step-by-step instructions (Render, Railway, Heroku, model hosting options).
+
 ## Model Version Comparison
 
 | | iam_p1 | iam_p2 | iam_p3 | **iam_p4 (default)** |
