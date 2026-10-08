@@ -1,99 +1,166 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nhận diện chữ viết tay - HTR</title>
+    <meta name="theme-color" content="#09090b">
+    <title>Nhận diện chữ viết tay · HTR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Toolbar Toggle Button -->
-    <button class="toolbar-toggle" onclick="toggleToolbar()">
-        <span id="toolbar-icon">☰</span>
-    </button>
-
-    <!-- Toolbar -->
-    <div id="toolbar" class="toolbar">
-        <div class="toolbar-section">
-            <label>
-                <input type="radio" name="mode" value="single" checked onchange="updateMode()"> Từ đơn
-            </label>
-            <label>
-                <input type="radio" name="mode" value="multi" onchange="updateMode()"> Nhiều từ/dòng
-            </label>
-        </div>
-        
-        <div class="toolbar-section">
-            <label for="decode-mode">Decode:</label>
-            <select id="decode-mode">
-                <option value="greedy">Greedy</option>
-                <option value="beam_search" selected>Beam Search</option>
-            </select>
-        </div>
-        
-        <div class="toolbar-section">
-            <label for="beam-width">Beam Width:</label>
-            <input type="number" id="beam-width" min="1" max="20" value="5">
-        </div>
-        
-        <div class="toolbar-section">
-            <label>
-                <input type="checkbox" id="spellcheck" checked> Sửa lỗi chính tả
-            </label>
-        </div>
-
-        <div class="toolbar-section">
-            <label for="brush-size">Độ dày nét:</label>
-            <input type="range" id="brush-size" min="1" max="20" value="3">
-            <span id="brush-size-value">3px</span>
-        </div>
-
-        <div class="toolbar-section">
-            <label for="brush-color">Màu nét vẽ:</label>
-            <input type="color" id="brush-color" value="#000000">
-        </div>
-    </div>
-
-    <div class="container">
-        <h1>✍️ Nhận diện chữ viết tay</h1>
-        
-        <!-- Canvas Card -->
-        <div class="card canvas-card">
-            <div class="card-header">
-                <h2>📝 Viết chữ tại đây</h2>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="brand">
+                <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                </svg>
+                <div class="brand-text">
+                    <span class="brand-name">Nhận diện chữ viết tay</span>
+                    <span class="brand-sub">Handwritten Text Recognition</span>
+                </div>
             </div>
-            <canvas id="canvas"></canvas>
-            <div class="button-group">
-                <button onclick="clearCanvas()">🗑️ Xóa</button>
-                <button onclick="undoStroke()">↶ Undo</button>
-                <button id="eraser-btn" onclick="toggleEraser()">🧹 Tẩy</button>
-                <label class="upload-btn">
-                    📁 Tải ảnh
-                    <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)" hidden>
-                </label>
-                <button onclick="resetCanvasSize()">↩️ Reset kích thước</button>
-                <button onclick="predict()">🔍 Nhận diện</button>
-            </div>
+            <button id="theme-toggle" class="icon-btn" type="button" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                </svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
+                </svg>
+            </button>
         </div>
+    </header>
 
-        <!-- Results Card -->
-        <div class="card results-card">
-            <div class="card-header">
-                <h2>📊 Kết quả</h2>
+    <main class="container">
+        <section class="workspace">
+            <!-- Canvas -->
+            <div class="card canvas-card">
+                <div class="card-header">
+                    <h2>Viết chữ tại đây</h2>
+                    <p class="card-hint">Vẽ trực tiếp bằng chuột hoặc tải ảnh chữ viết tay lên</p>
+                </div>
+                <div class="canvas-wrap">
+                    <canvas id="canvas"></canvas>
+                </div>
+                <div class="canvas-tools">
+                    <div class="tool-group" role="group" aria-label="Công cụ vẽ">
+                        <button id="undo-btn" class="icon-btn tool-btn" type="button" onclick="undoStroke()" title="Hoàn tác (Ctrl+Z)" aria-label="Hoàn tác">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                        </button>
+                        <button id="eraser-btn" class="icon-btn tool-btn" type="button" onclick="toggleEraser()" title="Tẩy / Bút vẽ" aria-label="Tẩy">
+                            <svg class="icon-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+                            <svg class="icon-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                        </button>
+                        <button id="clear-btn" class="icon-btn tool-btn" type="button" onclick="clearCanvas()" title="Xóa hết" aria-label="Xóa hết">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                        <label class="icon-btn tool-btn upload-btn" title="Tải ảnh lên" tabindex="0">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+                            <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)" hidden>
+                        </label>
+                        <button id="reset-size-btn" class="icon-btn tool-btn" type="button" onclick="resetCanvasSize()" title="Reset kích thước canvas" aria-label="Reset kích thước">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        </button>
+                    </div>
+                    <button id="predict-btn" class="btn-primary" type="button" onclick="predict()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+                        <span class="predict-label">Nhận diện</span>
+                        <span class="spinner" aria-hidden="true"></span>
+                    </button>
+                </div>
             </div>
-            <div id="result">
-                <p class="status-message">Vẽ chữ và nhấn "Nhận diện" để xem kết quả</p>
-            </div>
-        </div>
 
-        <!-- Processing Steps Card -->
+            <!-- Side panel -->
+            <div class="side-panel">
+                <!-- Result -->
+                <div class="card results-card">
+                    <div class="card-header">
+                        <h2>Kết quả</h2>
+                        <button id="copy-btn" class="icon-btn copy-btn" type="button" onclick="copyResult()" title="Sao chép kết quả" aria-label="Sao chép kết quả" hidden>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                    <div id="result">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <p>Vẽ chữ và nhấn <strong>Nhận diện</strong> để xem kết quả</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card settings-card">
+                    <div class="card-header">
+                        <h2>Cài đặt</h2>
+                    </div>
+                    <div class="settings-body">
+                        <div class="setting-row">
+                            <span class="setting-label">Chế độ</span>
+                            <div class="segmented" role="radiogroup" aria-label="Chế độ nhận diện">
+                                <label class="segment">
+                                    <input type="radio" name="mode" value="single" checked onchange="updateMode()">
+                                    <span>Từ đơn</span>
+                                </label>
+                                <label class="segment">
+                                    <input type="radio" name="mode" value="multi" onchange="updateMode()">
+                                    <span>Nhiều từ/dòng</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label class="setting-label" for="decode-mode">Decode</label>
+                            <select id="decode-mode">
+                                <option value="greedy">Greedy</option>
+                                <option value="beam" selected>Beam Search</option>
+                            </select>
+                        </div>
+                        <div class="setting-row" id="beam-row">
+                            <label class="setting-label" for="beam-width">Beam width</label>
+                            <input type="number" id="beam-width" min="1" max="20" value="5">
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Sửa lỗi chính tả</span>
+                            <label class="switch">
+                                <input type="checkbox" id="spellcheck" checked>
+                                <span class="switch-track" aria-hidden="true"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <label class="setting-label" for="brush-size">Độ dày nét</label>
+                            <div class="range-wrap">
+                                <input type="range" id="brush-size" min="1" max="20" value="3">
+                                <span id="brush-size-value" class="range-value">3px</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label class="setting-label" for="brush-color">Màu nét vẽ</label>
+                            <input type="color" id="brush-color" value="#000000">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Processing steps -->
         <div class="card steps-card">
             <div class="card-header">
-                <h2>🔬 Các bước xử lý</h2>
+                <h2>Quy trình xử lý</h2>
+                <p class="card-hint">Các bước tiền xử lý ảnh trước khi đưa vào mô hình</p>
             </div>
-            <div id="processing-steps"></div>
+            <div id="processing-steps">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+                    <p>Các bước xử lý sẽ hiển thị ở đây sau khi nhận diện</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="/static/main.js"></script>
 </body>
