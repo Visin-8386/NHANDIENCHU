@@ -425,7 +425,7 @@ def predict_handwriting():
         current_model = get_model()  # Lazy load model
         current_model.eval()
         with torch.no_grad():
-            result = current_model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=(decode_mode == 'beam'), return_confidence=True)
+            result = current_model.generate(tensor, SOS_IDX, EOS_IDX, max_len=27, mode=decode_mode, beam_width=beam_width, verbose=False, return_confidence=True)
 
             # Unpack result
             if isinstance(result, tuple):

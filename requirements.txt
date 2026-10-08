@@ -1,11 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0+cpu
+torchvision==0.26.0+cpu
 flask
 flask-cors
 gunicorn
-torch
-torchvision
-numpy
-opencv-python
+numpy<2
+opencv-python-headless
 pillow
-matplotlib
 pyspellchecker==0.7.1
-gdown
