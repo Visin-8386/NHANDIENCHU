@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.data import preprocessing
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+import preprocessing
 
 def test_resize_and_pad():
     img = np.ones((10, 20), dtype=np.uint8) * 255
