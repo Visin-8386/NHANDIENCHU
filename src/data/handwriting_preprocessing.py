@@ -352,8 +352,18 @@ def extract_lines_from_image(image_np):
     return line_images
 
 
-def image_to_base64(image_np):
-    """Convert numpy image to base64 string for web display"""
+def image_to_base64(image_np, quality=85, use_jpeg=False):
+    """Convert numpy image to base64 string for web display
+    
+    Args:
+        image_np: numpy array image
+        quality: compression quality (1-100), lower = smaller file
+        use_jpeg: if True, use JPEG compression (smaller for photos); 
+                  if False, use PNG (better for diagrams with sharp edges)
+    
+    Returns:
+        base64 data URI string
+    """
     import base64
     from io import BytesIO
     from PIL import Image
@@ -368,9 +378,17 @@ def image_to_base64(image_np):
     else:
         img = Image.fromarray(image_np)
     
-    # Save to bytes
+    # Save to bytes with compression
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
+    if use_jpeg:
+        # JPEG is better for photos but lower quality
+        img.save(buffered, format="JPEG", quality=quality, optimize=True)
+        mime_type = "image/jpeg"
+    else:
+        # PNG for diagrams/segmentation (better for sharp edges)
+        img.save(buffered, format="PNG", optimize=True)
+        mime_type = "image/png"
+    
     img_str = base64.b64encode(buffered.getvalue()).decode()
-    return f"data:image/png;base64,{img_str}"
+    return f"data:{mime_type};base64,{img_str}"
 

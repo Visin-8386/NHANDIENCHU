@@ -6,7 +6,7 @@ from PIL import Image
 from io import BytesIO
 import cv2
 import torch
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 
 # Fix encoding for Windows console
@@ -128,10 +128,23 @@ except Exception:
 app = Flask(__name__)
 CORS(app)
 
-# Model loads lazily on the first predict (get_model). Eager loading at startup
-# made the worker take minutes to boot on Render's 0.1-CPU free tier, failing
-# the deploy health check; lazy load lets gunicorn bind the port immediately,
-# and the 280s request timeout covers import + model load + first inference.
+# Add caching middleware for static files
+@app.after_request
+def add_cache_headers(response):
+    """Add cache control headers to responses."""
+    if request.path.startswith('/static/'):
+        # Cache static assets for 1 month
+        response.cache_control.max_age = 2592000
+        response.cache_control.public = True
+    elif request.path in ['/', '/index.html']:
+        # Don't cache HTML to ensure users get the latest version
+        response.cache_control.max_age = 0
+        response.cache_control.no_cache = True
+        response.cache_control.no_store = True
+    
+    # Enable gzip compression for JSON responses
+    response.headers['Vary'] = 'Accept-Encoding'
+    return response
 
 
 def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
