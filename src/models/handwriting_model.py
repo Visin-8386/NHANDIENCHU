@@ -525,7 +525,15 @@ def decode_sequence(indices, idx_to_char, remove_special=True):
 def load_handwriting_model(model_path, device='cpu'):
     """Load the trained handwriting recognition model - Auto-detect architecture"""
     # Load checkpoint first to check config
-    checkpoint = torch.load(model_path, map_location=device)
+    # mmap=True keeps weights file-backed: under memory pressure (Linux free tiers)
+    # the kernel can evict clean pages and re-read them from disk instead of OOM-killing.
+    try:
+        checkpoint = torch.load(model_path, map_location=device, mmap=True, weights_only=True)
+    except TypeError:
+        # Older torch without mmap/weights_only kwargs
+        checkpoint = torch.load(model_path, map_location=device)
+    except Exception:
+        checkpoint = torch.load(model_path, map_location=device)
     
     # Extract state dict
     if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:

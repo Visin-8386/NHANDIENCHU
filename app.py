@@ -127,6 +127,14 @@ except Exception:
 app = Flask(__name__)
 CORS(app)
 
+# Pre-download model at startup (not inside first request) so the first
+# predict doesn't hit gunicorn's request timeout while downloading 131MB.
+# Loading itself stays lazy to keep startup fast if the download fails.
+try:
+    download_model(MODEL_DOWNLOAD_URL, model_path)
+except Exception as e:
+    print(f"⚠️ Startup model download failed (will retry on first request): {e}")
+
 
 def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
     """
