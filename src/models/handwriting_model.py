@@ -587,8 +587,12 @@ def load_handwriting_model(model_path, device='cpu'):
         max_h_2d = pe_2d_shape[0]
         max_w_2d = pe_2d_shape[1]
     else:
-        max_h_2d = 100
-        max_w_2d = 1000
+        # PE stripped from checkpoint (it's a fixed sinusoidal table - recomputed
+        # deterministically by the module itself, saving ~100MB of file/RAM).
+        # Inputs are preprocessed to 64x256 -> backbone emits [B, C, 8, 64], so a
+        # small table suffices; sinusoidal values are index-invariant to table size.
+        max_h_2d = 16
+        max_w_2d = 128
     
     dropout = 0.2 if use_resnet else 0.1
     
@@ -614,8 +618,9 @@ def load_handwriting_model(model_path, device='cpu'):
         max_w_2d=max_w_2d
     )
     
-    # Load weights
-    model.load_state_dict(state_dict)
+    # Load weights (pos_enc_2d.pe is a registered buffer; allow it to be missing
+    # when it was stripped from the checkpoint - the module already computed it)
+    model.load_state_dict(state_dict, strict=('pos_enc_2d.pe' in state_dict))
     
     model.to(device)
     model.eval()

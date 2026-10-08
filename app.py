@@ -75,13 +75,14 @@ def download_model(url, destination):
 
 
 # Path to the trained model
-# iam_p1 (weights-only v2): SimplifiedCNN, d=256, 4+3 layers - CER 3.66%
-# Chosen over iam_p4 (CER 3.60%) because iam_p4 needs ~814MB RAM (OOM on 512MB free tier);
-# iam_p1 v2 peaks at ~423MB with inference - fits Render free tier.
-model_path = "models/iam_p1/iam_p1_weights_only_v2.pth"
+# iam_p1 (PE-free): SimplifiedCNN, d=256, 4+3 layers - CER 3.66%
+# Chosen over iam_p4 (CER 3.60%) because iam_p4 needs ~814MB RAM (OOM on 512MB free tier).
+# This variant strips the 102MB sinusoidal positional-encoding table (recomputed at load,
+# shrunk to fit the 64x256 input grid) -> 29MB file, ~369MB peak RAM with inference.
+model_path = "models/iam_p1/iam_p1_pe_free.pth"
 
 # Download model from GitHub Release if needed (for deployment)
-MODEL_DOWNLOAD_URL = "https://github.com/Visin-8386/NHANDIENCHU/releases/download/model-iam-p1-v2/iam_p1_weights_only_v2.pth"
+MODEL_DOWNLOAD_URL = "https://github.com/Visin-8386/NHANDIENCHU/releases/download/model-iam-p1-v2/iam_p1_pe_free.pth"
 
 # Memory optimization for free-tier deployment
 os.environ['OMP_NUM_THREADS'] = '1'
