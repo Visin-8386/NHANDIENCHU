@@ -1,0 +1,38 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Model checkpoints (large files - use Git LFS or download separately)
+*.pth
+*.h5
+*.onnx
+*.ckpt
+
+# Datasets
+data/raw/
+data/processed/
+data/authentic_digits_test/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs & temp
+*.log
+temp_*
+_*.txt
