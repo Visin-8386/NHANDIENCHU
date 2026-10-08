@@ -595,29 +595,48 @@ body {
 .result-loading {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 8px 0;
+    gap: 14px;
+    padding: 12px 0;
+    animation: fade-up 0.35s var(--ease);
 }
 
 .loading-hint {
     font-size: 12px;
     color: var(--text-muted);
     text-align: center;
+    margin-top: 8px;
 }
 
 .skeleton {
     border-radius: var(--radius-sm);
-    background: linear-gradient(90deg, var(--track) 25%, var(--border) 50%, var(--track) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--track) 0%,
+        var(--track) 25%,
+        var(--border) 50%,
+        var(--track) 75%,
+        var(--track) 100%
+    );
     background-size: 200% 100%;
-    animation: shimmer 1.4s ease infinite;
+    animation: shimmer 1.8s cubic-bezier(0.25, 0.4, 0.25, 1) infinite;
+    will-change: background-position;
 }
 
-.skeleton-line-lg { height: 52px; }
-.skeleton-line-sm { height: 14px; width: 60%; margin: 0 auto; }
+.skeleton-line-lg { 
+    height: 48px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-line-sm { 
+    height: 16px;
+    width: 70%;
+    margin: 0 auto;
+    border-radius: var(--radius-sm);
+}
 
 @keyframes shimmer {
-    from { background-position: 200% 0; }
-    to { background-position: -200% 0; }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 @keyframes fade-up {

@@ -385,6 +385,7 @@ async function predict() {
 
             if (data.error) {
                 showError(data.error);
+                resetPredictButton();
                 return;
             }
 
@@ -397,6 +398,7 @@ async function predict() {
             if (data.processing_steps) {
                 displayProcessingSteps(data.processing_steps);
             }
+            resetPredictButton();
             return;
         } catch (error) {
             lastError = error;
@@ -409,6 +411,14 @@ async function predict() {
     }
 
     showError('Không nhận được phản hồi từ máy chủ. Vui lòng thử lại sau vài giây.');
+    resetPredictButton();
+}
+
+function resetPredictButton() {
+    const predictBtn = document.getElementById('predict-btn');
+    isPredicting = false;
+    predictBtn.classList.remove('loading');
+    predictBtn.disabled = false;
 }
 
 function showError(message) {
@@ -439,7 +449,11 @@ function displaySingleWordResult(data) {
     resultDiv.innerHTML = html;
     lastResultText = data.text || '';
     document.getElementById('copy-btn').hidden = !lastResultText;
+    
+    // Trigger reflow and add animation
+    resultDiv.offsetHeight;
     animateConfidenceBars();
+    showToast('Nhận diện thành công');
 }
 
 function displayMultiWordResult(data) {
