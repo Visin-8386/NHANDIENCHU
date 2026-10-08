@@ -338,6 +338,7 @@ async function predict() {
         <div class="result-loading">
             <div class="skeleton skeleton-line-lg"></div>
             <div class="skeleton skeleton-line-sm"></div>
+            <p class="loading-hint">Đang nhận diện… lần đầu sau khi ứng dụng ngủ có thể mất 1–2 phút</p>
         </div>`;
     stepsDiv.innerHTML = EMPTY_STEPS_HTML;
 
@@ -355,43 +356,59 @@ async function predict() {
     const beamWidth = parseInt(document.getElementById('beam-width').value) || 3;
     const spellcheck = document.getElementById('spellcheck').checked;
 
-    try {
-        const response = await fetch('/predict_handwriting', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                image: imageData,
-                mode: currentMode,
-                decode_mode: decodeMode,
-                beam_width: beamWidth,
-                spellcheck: spellcheck
-            })
-        });
+    const payload = JSON.stringify({
+        image: imageData,
+        mode: currentMode,
+        decode_mode: decodeMode,
+        beam_width: beamWidth,
+        spellcheck: spellcheck
+    });
 
-        const data = await response.json();
+    // The free-tier service sleeps when idle; the first request after wake can
+    // fail while the worker boots. Retry transparently (up to 2 extra attempts).
+    const MAX_ATTEMPTS = 3;
+    let lastError = null;
 
-        if (data.error) {
-            showError(data.error);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const response = await fetch('/predict_handwriting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload
+            });
+
+            if (response.status === 502 || response.status === 503 || response.status === 429) {
+                throw new Error('server-warming');
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+
+            if (currentMode === 'multi' && data.words) {
+                displayMultiWordResult(data);
+            } else {
+                displaySingleWordResult(data);
+            }
+
+            if (data.processing_steps) {
+                displayProcessingSteps(data.processing_steps);
+            }
             return;
+        } catch (error) {
+            lastError = error;
+            console.error(`Prediction attempt ${attempt} failed:`, error);
+            if (attempt < MAX_ATTEMPTS) {
+                // Wait for the worker to finish booting before retrying
+                await new Promise(r => setTimeout(r, 20000));
+            }
         }
-
-        if (currentMode === 'multi' && data.words) {
-            displayMultiWordResult(data);
-        } else {
-            displaySingleWordResult(data);
-        }
-
-        if (data.processing_steps) {
-            displayProcessingSteps(data.processing_steps);
-        }
-    } catch (error) {
-        console.error('Prediction error:', error);
-        showError('Lỗi kết nối: ' + error.message);
-    } finally {
-        isPredicting = false;
-        predictBtn.classList.remove('loading');
-        predictBtn.disabled = false;
     }
+
+    showError('Không nhận được phản hồi từ máy chủ. Vui lòng thử lại sau vài giây.');
 }
 
 function showError(message) {

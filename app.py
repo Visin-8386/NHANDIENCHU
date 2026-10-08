@@ -128,16 +128,10 @@ except Exception:
 app = Flask(__name__)
 CORS(app)
 
-# Eagerly download AND load the model at startup so the first request only
-# pays inference cost. Render's proxy kills requests that exceed ~100s, and a
-# lazy first request (download + torch import + load + inference) blows past it.
-try:
-    download_model(MODEL_DOWNLOAD_URL, model_path)
-    model = load_handwriting_model(model_path, device=device)
-    model.eval()
-    print("✅ Model pre-loaded at startup!")
-except Exception as e:
-    print(f"⚠️ Startup model load failed (will retry on first request): {e}")
+# Model loads lazily on the first predict (get_model). Eager loading at startup
+# made the worker take minutes to boot on Render's 0.1-CPU free tier, failing
+# the deploy health check; lazy load lets gunicorn bind the port immediately,
+# and the 280s request timeout covers import + model load + first inference.
 
 
 def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
