@@ -2,6 +2,7 @@
    HTR — Handwritten Text Recognition UI
    Dark-first neutral monochrome (Linear/Vercel-inspired)
    Font: Be Vietnam Pro · Accent: emerald (used sparingly)
+   Modern SOTA patterns: skeleton loading, smooth transitions
    ============================================================ */
 
 /* ---------- Design tokens ---------- */
@@ -165,15 +166,22 @@ body {
 
 .workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr);
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
     align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .workspace {
+        grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+        gap: 24px;
+    }
 }
 
 .side-panel {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
     min-width: 0;
 }
 
@@ -183,8 +191,18 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
-    padding: 22px;
-    transition: background 0.25s var(--ease), border-color 0.25s var(--ease);
+    padding: 24px;
+    transition: background 0.25s var(--ease), border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.card:hover {
+    border-color: var(--border-strong);
+}
+
+@media (max-width: 640px) {
+    .card {
+        padding: 18px;
+    }
 }
 
 .card-header {
@@ -235,6 +253,12 @@ body {
     gap: 12px;
     margin-top: 16px;
     flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+    .canvas-tools {
+        gap: 8px;
+    }
 }
 
 .tool-group {
@@ -310,7 +334,8 @@ body {
     font-weight: 600;
     letter-spacing: -0.005em;
     cursor: pointer;
-    transition: background 0.15s var(--ease), transform 0.1s var(--ease);
+    transition: background 0.15s var(--ease), transform 0.1s var(--ease), box-shadow 0.15s var(--ease);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .btn-primary svg {
@@ -318,17 +343,28 @@ body {
     height: 16px;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
-.btn-primary:active {
+.btn-primary:active:not(:disabled) {
     transform: scale(0.98);
 }
 
+.btn-primary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+}
+
+.btn-primary.loading {
+    position: relative;
+    color: transparent;
 }
 
 /* spinner inside primary button */
@@ -342,8 +378,17 @@ body {
     animation: spin 0.7s linear infinite;
 }
 
-.btn-primary.loading .spinner { display: inline-block; }
-.btn-primary.loading .predict-label { opacity: 0.55; }
+.btn-primary.loading .spinner { 
+    display: inline-block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.btn-primary.loading .predict-label { 
+    opacity: 0;
+}
 
 @keyframes spin {
     to { transform: rotate(360deg); }
@@ -590,30 +635,38 @@ body {
 .settings-body {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 18px;
 }
 
 .setting-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.setting-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .setting-label {
     font-size: 13.5px;
     color: var(--text-secondary);
     font-weight: 500;
+    min-width: 100px;
 }
 
 /* segmented control */
 .segmented {
     display: inline-flex;
-    padding: 3px;
+    padding: 4px;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--bg-subtle);
-    gap: 2px;
+    gap: 3px;
 }
 
 .segment {
@@ -629,7 +682,7 @@ body {
 
 .segment span {
     display: inline-block;
-    padding: 5px 12px;
+    padding: 6px 14px;
     font-size: 12.5px;
     font-weight: 500;
     color: var(--text-muted);
@@ -643,9 +696,9 @@ body {
 }
 
 .segment input:checked + span {
-    color: var(--text);
-    background: var(--card);
-    box-shadow: var(--shadow-card);
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .segment input:focus-visible + span {
@@ -655,7 +708,8 @@ body {
 
 /* select + number */
 select,
-input[type="number"] {
+input[type="number"],
+input[type="color"] {
     font-family: var(--font-sans);
     font-size: 13px;
     color: var(--text);
@@ -663,7 +717,7 @@ input[type="number"] {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 7px 10px;
-    transition: border-color 0.15s var(--ease);
+    transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
     min-width: 0;
 }
 
@@ -679,16 +733,18 @@ select {
 select:hover,
 input[type="number"]:hover {
     border-color: var(--border-strong);
+    background: var(--card);
 }
 
 select:focus,
 input[type="number"]:focus {
     outline: none;
     border-color: var(--accent);
+    background: var(--card);
 }
 
 input[type="number"] {
-    width: 72px;
+    width: 80px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -750,54 +806,67 @@ input[type="number"] {
 .range-wrap {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 input[type="range"] {
-    width: 110px;
-    height: 4px;
+    width: 120px;
+    height: 5px;
     appearance: none;
     -webkit-appearance: none;
-    background: var(--track);
-    border-radius: 2px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--value, 50%), var(--track) var(--value, 50%), var(--track) 100%);
+    border-radius: 3px;
     cursor: pointer;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: var(--text);
-    border: none;
-    transition: transform 0.15s var(--ease);
+    background: var(--accent);
+    border: 2px solid var(--card);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.15);
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: var(--text);
+    background: var(--accent);
+    border: 2px solid var(--card);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-track {
+    background: transparent;
     border: none;
 }
 
 .range-value {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    min-width: 30px;
+    min-width: 32px;
     text-align: right;
+    background: var(--bg-subtle);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
 }
 
 /* color input */
 input[type="color"] {
-    width: 36px;
-    height: 28px;
+    width: 44px;
+    height: 34px;
     padding: 2px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -805,32 +874,50 @@ input[type="color"] {
     cursor: pointer;
 }
 
+input[type="color"]:hover {
+    border-color: var(--border-strong);
+    background: var(--card);
+}
+
 input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0;
+    padding: 2px;
 }
 
 input[type="color"]::-webkit-color-swatch {
-    border: none;
-    border-radius: 3px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
 }
 
 /* ---------- Processing steps ---------- */
 .steps-card {
-    margin-top: 20px;
+    margin-top: 28px;
 }
 
 #processing-steps {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 640px) {
+    #processing-steps {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
 }
 
 .step-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--bg-subtle);
-    padding: 10px;
+    padding: 12px;
     animation: fade-up 0.35s var(--ease) backwards;
+    transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.step-card:hover {
+    border-color: var(--border-strong);
+    background: var(--card);
 }
 
 .step-image {
@@ -839,18 +926,20 @@ input[type="color"]::-webkit-color-swatch {
     border-radius: var(--radius-sm);
     background: #fff;
     border: 1px solid var(--border);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    aspect-ratio: 4/3;
+    object-fit: cover;
 }
 
 .step-title {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 .step-meta {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
@@ -916,18 +1005,22 @@ input[type="color"]::-webkit-color-swatch {
     }
 
     .canvas-tools {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
     }
 
     .tool-group {
         justify-content: center;
+        flex-wrap: wrap;
+        width: 100%;
     }
 
     .btn-primary {
         width: 100%;
         justify-content: center;
-        height: 46px;
+        height: 44px;
+        font-size: 15px;
     }
 
     .recognized-text {
@@ -935,8 +1028,14 @@ input[type="color"]::-webkit-color-swatch {
     }
 
     .setting-row {
-        flex-wrap: wrap;
-        row-gap: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        border-bottom-width: 1px;
+    }
+
+    .setting-label {
+        min-width: auto;
     }
 
     .segmented {
@@ -951,10 +1050,25 @@ input[type="color"]::-webkit-color-swatch {
     .segment span {
         display: block;
         text-align: center;
+        padding: 8px 12px;
+    }
+
+    select,
+    input[type="number"],
+    input[type="color"] {
+        width: 100%;
+    }
+
+    .range-wrap {
+        width: 100%;
+    }
+
+    input[type="range"] {
+        width: calc(100% - 50px);
     }
 
     #processing-steps {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 10px;
     }
 }
