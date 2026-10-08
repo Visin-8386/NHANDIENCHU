@@ -366,6 +366,25 @@ def index():
     return send_from_directory(os.path.dirname(__file__), 'index.html')
 
 
+@app.route('/warmup', methods=['POST'])
+def warmup():
+    """Pre-load the model in the background so the first predict is fast.
+
+    The frontend calls this on page load; by the time the user finishes
+    drawing and clicks predict, the model is already in RAM.
+    """
+    if model is None:
+        import threading
+        def _load():
+            try:
+                get_model()
+                print("✅ Warmup: model ready")
+            except Exception as e:
+                print(f"⚠️ Warmup failed: {e}")
+        threading.Thread(target=_load, daemon=True).start()
+    return jsonify({'status': 'warming' if model is None else 'ready'})
+
+
 @app.route('/predict_handwriting', methods=['POST'])
 def predict_handwriting():
     try:

@@ -574,6 +574,9 @@ window.addEventListener('load', function () {
     // Sync beam row visibility with default selection
     document.getElementById('beam-row').style.display =
         document.getElementById('decode-mode').value === 'beam' ? '' : 'none';
+    // Warm up the model in the background while the user draws, so the first
+    // predict doesn't pay the model-load cost (free tier sleeps when idle)
+    fetch('/warmup', { method: 'POST' }).catch(() => {});
 });
 
 window.addEventListener('resize', function () {
