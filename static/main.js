@@ -352,7 +352,7 @@ async function predict() {
 
     const imageData = tempCanvas.toDataURL('image/png');
     const decodeMode = document.getElementById('decode-mode').value;
-    const beamWidth = parseInt(document.getElementById('beam-width').value) || 5;
+    const beamWidth = parseInt(document.getElementById('beam-width').value) || 3;
     const spellcheck = document.getElementById('spellcheck').checked;
 
     try {

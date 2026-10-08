@@ -37,8 +37,8 @@ from src.data.segmentation import (
 from src.postprocessing.spellcheck import SpellCorrector
 
 
-def download_model_from_gdrive(file_id, destination):
-    """Download model file from Google Drive if it doesn't exist locally."""
+def download_model(url, destination):
+    """Download model file if it doesn't exist locally."""
     if os.path.exists(destination):
         try:
             file_size = os.path.getsize(destination)
@@ -53,66 +53,35 @@ def download_model_from_gdrive(file_id, destination):
             if os.path.exists(destination):
                 os.remove(destination)
 
-    print(f"⬇️  Model not found locally. Downloading from Google Drive...")
+    print(f"⬇️  Model not found locally. Downloading from {url}...")
 
     # Create directory if needed
     os.makedirs(os.path.dirname(destination), exist_ok=True)
 
     try:
-        # Try gdown first (best for Google Drive)
-        try:
-            import gdown
-            url = f"https://drive.google.com/uc?id={file_id}"
-            gdown.download(url, destination, quiet=False)
-            file_size = os.path.getsize(destination)
-            if file_size < 1000:
-                raise Exception(f"Downloaded file is too small ({file_size} bytes), likely an error page")
-            print(f"✅ Model downloaded successfully to {destination}")
-            return
-        except ImportError:
-            print("📦 gdown not found. Install it with: pip install gdown")
-            print("Trying alternative download method...")
-
-            import urllib.request
-
-            urls = [
-                f"https://drive.google.com/uc?id={file_id}&export=download&confirm=t",
-                f"https://drive.usercontent.google.com/download?id={file_id}&confirm=t",
-            ]
-            for url in urls:
-                try:
-                    print(f"Trying URL: {url}")
-                    urllib.request.urlretrieve(url, destination)
-                    file_size = os.path.getsize(destination)
-                    if file_size < 1000:
-                        os.remove(destination)
-                        continue
-                    print(f"✅ Model downloaded successfully to {destination}")
-                    return
-                except Exception as e:
-                    print(f"Failed with this URL: {e}")
-                    if os.path.exists(destination):
-                        os.remove(destination)
-                    continue
-
-            raise Exception("All download methods failed")
-
+        import urllib.request
+        urllib.request.urlretrieve(url, destination)
+        file_size = os.path.getsize(destination)
+        if file_size < 1000:
+            os.remove(destination)
+            raise Exception(f"Downloaded file is too small ({file_size} bytes)")
+        print(f"✅ Model downloaded successfully to {destination}")
     except Exception as e:
         print(f"\n❌ Failed to download model: {e}")
         print("\nPlease manually download the model:")
-        print("1. Go to: https://drive.google.com/file/d/1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi/view")
-        print("2. Click 'Download' button")
-        print(f"3. Place the downloaded file at: {destination}")
-        print("\nOr install gdown: pip install gdown")
+        print(f"1. Go to: {url}")
+        print(f"2. Place the downloaded file at: {destination}")
         raise
 
 
 # Path to the trained model
-# iam_p4: ResNet backbone, d=384, 6+4 layers - best CER (3.60%)
-model_path = "models/iam_p4/best_encoder_decoder.pth"
+# iam_p1 (weights-only v2): SimplifiedCNN, d=256, 4+3 layers - CER 3.66%
+# Chosen over iam_p4 (CER 3.60%) because iam_p4 needs ~814MB RAM (OOM on 512MB free tier);
+# iam_p1 v2 peaks at ~423MB with inference - fits Render free tier.
+model_path = "models/iam_p1/iam_p1_weights_only_v2.pth"
 
-# Download model from Google Drive if needed (for deployment)
-GDRIVE_FILE_ID = "1Cc2NdGtJDHpi18Zi2WQDhEaDTJsGewqi"
+# Download model from GitHub Release if needed (for deployment)
+MODEL_DOWNLOAD_URL = "https://github.com/Visin-8386/NHANDIENCHU/releases/download/model-iam-p1-v2/iam_p1_weights_only_v2.pth"
 
 # Memory optimization for free-tier deployment
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -129,7 +98,7 @@ def get_model():
     if model is None:
         print(f"🔥 Loading model on {device}...")
         print(f"📦 Model: {model_path}")
-        download_model_from_gdrive(GDRIVE_FILE_ID, model_path)
+        download_model(MODEL_DOWNLOAD_URL, model_path)
         model = load_handwriting_model(model_path, device=device)
         model.eval()
         print("✅ Model loaded successfully!")
@@ -270,7 +239,8 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
         
         with torch.no_grad():
             # Process in mini-batches if too large
-            batch_size = min(16, len(segments))
+            # Small batch to stay under 512MB RAM on free tier (beam search is memory-hungry)
+            batch_size = min(2, len(segments))
             
             for i in range(0, len(segments), batch_size):
                 end_idx = min(i + batch_size, len(segments))
@@ -297,7 +267,11 @@ def predict_multi_word(image_np, decode_mode, beam_width, spellcheck_enabled):
                         pred_text = decode_sequence(result[j], idx_to_char)
                         predictions.append(pred_text)
                         confidences_list.append(0.95)
-        
+
+                # Free intermediate tensors to stay within free-tier RAM
+                import gc
+                gc.collect()
+
         # Apply spellcheck and build results
         reconstructed_text = []
         current_line = -1
@@ -411,8 +385,8 @@ def predict_handwriting():
             beam_width = int(data.get('beam_width', 3))
             if beam_width < 1:
                 beam_width = 1
-            # Cap beam width to something reasonable (e.g., 50)
-            beam_width = min(beam_width, 50)
+            # Cap beam width to stay within free-tier RAM (beam search is memory-hungry)
+            beam_width = min(beam_width, 10)
         except Exception:
             beam_width = 3
 
