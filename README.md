@@ -74,7 +74,7 @@ python app.py
 Open your browser at **http://127.0.0.1:5000**
 
 > **Note:** Model weights must exist at `models/iam_p4/best_encoder_decoder.pth` (default).
-> To switch models, change `model_path` in [app.py](app.py#L41).
+> To switch models, change `model_path` in [app.py](app.py#L112).
 
 ## API
 
